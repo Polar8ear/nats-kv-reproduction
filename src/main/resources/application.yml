@@ -6,6 +6,9 @@ nats:
   url: ${NATS_URL:nats://localhost:4222}
   bucket:
     name: test-bucket
+    # TTL (Time To Live) for KV entries in seconds
+    # Original value was 3600 (60 minutes), changed to 30 seconds for faster reproduction
+    ttl-seconds: 30
 
 server:
   port: 8080

@@ -29,6 +29,9 @@ public class NatsKvService {
     @Value("${nats.bucket.name:test-bucket}")
     private String bucketName;
 
+    @Value("${nats.bucket.ttl-seconds:1800}")
+    private long ttlSeconds;
+
     private Connection natsConnection;
     private KeyValue keyValueStore;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -80,10 +83,13 @@ public class NatsKvService {
                     .maxHistoryPerKey(3)
                     .replicas(3)
                     .compression(true)
+                    .ttl(Duration.ofSeconds(ttlSeconds))
+                    .maxBucketSize(10 * 1024 * 1024) // 10MB
+                    .maxValueSize(8 * 1024) // 8KB
                     .build();
 
             kvm.create(config);
-            log.info("Created KV bucket: {} with File storage, 3 replicas, 3 history, compression enabled", bucketName);
+            log.info("Created KV bucket: {} with File storage, 3 replicas, 3 history, compression enabled, TTL {}s, max bucket 10MB, max value 8KB", bucketName, ttlSeconds);
         } catch (JetStreamApiException e) {
             throw new RuntimeException(e);
         }

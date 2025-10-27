@@ -13,6 +13,9 @@ services:
       --routes nats://nats-2:6222,nats://nats-3:6222
       -m 8222
       -p 4222
+      --store_dir /data
+    volumes:
+      - ./nats-data/nats-1:/data
     networks:
       - nats-cluster
 
@@ -30,6 +33,9 @@ services:
       --routes nats://nats-1:6222,nats://nats-3:6222
       -m 8222
       -p 4222
+      --store_dir /data
+    volumes:
+      - ./nats-data/nats-2:/data
     networks:
       - nats-cluster
 
@@ -47,6 +53,9 @@ services:
       --routes nats://nats-1:6222,nats://nats-2:6222
       -m 8222
       -p 4222
+      --store_dir /data
+    volumes:
+      - ./nats-data/nats-3:/data
     networks:
       - nats-cluster
 
