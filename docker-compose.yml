@@ -1,0 +1,67 @@
+version: '3.9'
+
+services:
+  nats-1:
+    image: nats:2.12.1
+    container_name: nats-1
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: >
+      -js
+      -cluster_name NATS
+      -cluster nats://0.0.0.0:6222
+      -routes nats://nats-2:6222,nats://nats-3:6222
+      -http_port 8222
+    networks:
+      - nats-cluster
+
+  nats-2:
+    image: nats:2.12.1
+    container_name: nats-2
+    ports:
+      - "4223:4222"
+      - "8223:8222"
+    command: >
+      -js
+      -cluster_name NATS
+      -cluster nats://0.0.0.0:6222
+      -routes nats://nats-1:6222,nats://nats-3:6222
+      -http_port 8222
+    networks:
+      - nats-cluster
+
+  nats-3:
+    image: nats:2.12.1
+    container_name: nats-3
+    ports:
+      - "4224:4222"
+      - "8224:8222"
+    command: >
+      -js
+      -cluster_name NATS
+      -cluster nats://0.0.0.0:6222
+      -routes nats://nats-1:6222,nats://nats-2:6222
+      -http_port 8222
+    networks:
+      - nats-cluster
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nats-kv-app
+    ports:
+      - "8080:8080"
+    environment:
+      - NATS_URL=nats://nats-1:4222,nats://nats-2:4222,nats://nats-3:4222
+    depends_on:
+      - nats-1
+      - nats-2
+      - nats-3
+    networks:
+      - nats-cluster
+
+networks:
+  nats-cluster:
+    driver: bridge

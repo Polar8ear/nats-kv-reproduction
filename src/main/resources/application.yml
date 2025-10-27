@@ -1,0 +1,12 @@
+nats:
+  url: ${NATS_URL:nats://localhost:4222}
+  bucket:
+    name: test-bucket
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.polar8ear: INFO
+    io.nats: DEBUG
