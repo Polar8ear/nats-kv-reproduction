@@ -1,12 +1,7 @@
 package com.polar8ear.nats_kv_reproduction_issue.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.nats.client.Connection;
-import io.nats.client.JetStreamManagement;
-import io.nats.client.KeyValue;
-import io.nats.client.KeyValueManagement;
-import io.nats.client.Nats;
-import io.nats.client.Options;
+import io.nats.client.*;
 import io.nats.client.api.KeyValueConfiguration;
 import io.nats.client.api.KeyValueEntry;
 import io.nats.client.api.StorageType;
@@ -41,6 +36,8 @@ public class NatsKvService {
     private final ScheduledExecutorService initializerExecutor = Executors.newSingleThreadScheduledExecutor();
 
     private static final List<String> FIXED_KEYS = List.of("key1", "key2", "key3");
+    private volatile int lastKeyCount = -1;
+    private volatile long lastKeyCountChangeTime = -1;
 
     @PostConstruct
     public void initialize() {
@@ -73,7 +70,7 @@ public class NatsKvService {
         }
     }
 
-    private void createOrGetBucket() throws IOException, io.nats.client.api.JetStreamApiException {
+    private void createOrGetBucket() throws IOException, io.nats.client.JetStreamApiException {
         KeyValueManagement kvm = natsConnection.keyValueManagement();
 
         try {
@@ -87,12 +84,8 @@ public class NatsKvService {
 
             kvm.create(config);
             log.info("Created KV bucket: {} with File storage, 3 replicas, 3 history, compression enabled", bucketName);
-        } catch (io.nats.client.api.JetStreamApiException e) {
-            if (e.getMessage().contains("already in use") || e.getApiErrorCode() == 10058) {
-                log.info("KV bucket already exists: {}", bucketName);
-            } else {
-                throw e;
-            }
+        } catch (JetStreamApiException e) {
+            throw new RuntimeException(e);
         }
 
         keyValueStore = natsConnection.keyValue(bucketName);
@@ -104,7 +97,26 @@ public class NatsKvService {
                 // Create a fresh KeyValue instance for each read
                 KeyValue kv = natsConnection.keyValue(bucketName);
                 List<String> keys = kv.keys();
-                log.info("Reading KV bucket. Total keys: {}", keys.size());
+                int currentKeyCount = keys.size();
+
+                if(lastKeyCount == -1) {
+                    lastKeyCount = currentKeyCount;
+                }
+
+                // Check if key count has changed
+                if (lastKeyCount != currentKeyCount) {
+                    lastKeyCountChangeTime = System.currentTimeMillis();
+                    log.warn("⚠️ KEY COUNT CHANGED! Previous: {}, Current: {}, Time: {}",
+                            lastKeyCount, currentKeyCount, new java.util.Date(lastKeyCountChangeTime));
+                    lastKeyCount = currentKeyCount;
+                } else {
+                    if (lastKeyCountChangeTime != -1) {
+                        log.info("Reading KV bucket. Total keys: {}, Last change time: {}",
+                                currentKeyCount, new java.util.Date(lastKeyCountChangeTime));
+                    } else {
+                        log.info("Reading KV bucket. Total keys: {}", currentKeyCount);
+                    }
+                }
 
                 for (String key : keys) {
                     try {
@@ -120,7 +132,7 @@ public class NatsKvService {
             } catch (Exception e) {
                 log.error("Error in reader thread", e);
             }
-        }, 5, 5, TimeUnit.SECONDS);
+        }, 0, 1, TimeUnit.SECONDS);
 
         log.info("Started KV reader thread with 5s interval");
     }
@@ -155,7 +167,7 @@ public class NatsKvService {
             } catch (Exception e) {
                 log.error("Error in initializer thread", e);
             }
-        }, 0, 10, TimeUnit.SECONDS);
+        }, 0, 1, TimeUnit.SECONDS);
 
         log.info("Started KV initializer thread with 10s interval for keys: {}", FIXED_KEYS);
     }

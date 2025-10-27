@@ -1,3 +1,7 @@
+spring:
+  application:
+    name: nats-kv-reproduction-issue
+
 nats:
   url: ${NATS_URL:nats://localhost:4222}
   bucket:

@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   nats-1:
     image: nats:2.12.1
@@ -9,10 +7,12 @@ services:
       - "8222:8222"
     command: >
       -js
-      -cluster_name NATS
-      -cluster nats://0.0.0.0:6222
-      -routes nats://nats-2:6222,nats://nats-3:6222
-      -http_port 8222
+      --cluster_name NATS
+      --server_name N1
+      --cluster nats://0.0.0.0:6222
+      --routes nats://nats-2:6222,nats://nats-3:6222
+      -m 8222
+      -p 4222
     networks:
       - nats-cluster
 
@@ -24,10 +24,12 @@ services:
       - "8223:8222"
     command: >
       -js
-      -cluster_name NATS
-      -cluster nats://0.0.0.0:6222
-      -routes nats://nats-1:6222,nats://nats-3:6222
-      -http_port 8222
+      --cluster_name NATS
+      --server_name N2
+      --cluster nats://0.0.0.0:6222
+      --routes nats://nats-1:6222,nats://nats-3:6222
+      -m 8222
+      -p 4222
     networks:
       - nats-cluster
 
@@ -39,10 +41,12 @@ services:
       - "8224:8222"
     command: >
       -js
-      -cluster_name NATS
-      -cluster nats://0.0.0.0:6222
-      -routes nats://nats-1:6222,nats://nats-2:6222
-      -http_port 8222
+      --cluster_name NATS
+      --server_name N3
+      --cluster nats://0.0.0.0:6222
+      --routes nats://nats-1:6222,nats://nats-2:6222
+      -m 8222
+      -p 4222
     networks:
       - nats-cluster
 
@@ -59,6 +63,12 @@ services:
       - nats-1
       - nats-2
       - nats-3
+    networks:
+      - nats-cluster
+  nui:
+    image: ghcr.io/nats-nui/nui:latest
+    ports:
+      - "31311:31311"
     networks:
       - nats-cluster
 
